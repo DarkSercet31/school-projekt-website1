@@ -1,159 +1,76 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// add_measurement.php
+// Simple API endpoint to add a measurement for a station
 
 require '../includes/db_connection.php';
-require '../config/lang.php';
 
-// Require login + admin
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: auth/login.php');
+// Optional: simple token so not everyone can push data
+$secretToken = 'CHANGE_ME_SECRET_TOKEN';
+
+header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['status' => 'error', 'message' => 'Only POST allowed']);
     exit;
 }
-if (empty($_SESSION['role']) || $_SESSION['role'] !== 'Admin') {
-    header('Location: user/dashboard.php');
+
+$token       = $_POST['token'] ?? '';
+$serial      = trim($_POST['serial'] ?? '');        // station pk_serialNumber
+$temperature = $_POST['temperature'] ?? null;
+$humidity    = $_POST['humidity'] ?? null;
+$pressure    = $_POST['pressure'] ?? null;
+$light       = $_POST['light'] ?? null;
+$gas         = $_POST['gas'] ?? null;
+
+if ($token !== $secretToken) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid token']);
     exit;
 }
 
-$username  = $_SESSION['pk_username'] ?? ($_SESSION['username'] ?? '');
-$firstName = $_SESSION['firstName'] ?? '';
-$lang      = $_SESSION['lang'] ?? 'en';
+if ($serial === '') {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Missing serial']);
+    exit;
+}
 
-include '../includes/header.php';
-?>
+// Optional: check that station exists
+$stmt = mysqli_prepare($link, "SELECT pk_serialNumber FROM station WHERE pk_serialNumber = ?");
+mysqli_stmt_bind_param($stmt, 's', $serial);
+mysqli_stmt_execute($stmt);
+mysqli_stmt_store_result($stmt);
+if (mysqli_stmt_num_rows($stmt) === 0) {
+    mysqli_stmt_close($stmt);
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Unknown station']);
+    exit;
+}
+mysqli_stmt_close($stmt);
 
-<main class="main-shell">
-    <div class="container-xxl px-3 py-4">
+// Insert measurement
+$stmt = mysqli_prepare(
+    $link,
+    "INSERT INTO measurement
+        (temperature, humidity, pressure, light, gas, timestamp, fk_station_records)
+     VALUES (?, ?, ?, ?, ?, NOW(), ?)"
+);
+mysqli_stmt_bind_param(
+    $stmt,
+    'ddddds',
+    $temperature,
+    $humidity,
+    $pressure,
+    $light,
+    $gas,
+    $serial
+);
+$ok = mysqli_stmt_execute($stmt);
+mysqli_stmt_close($stmt);
 
-        <!-- Header-Karte -->
-        <section class="glass-card mb-3">
-            <div class="glass-card-header">
-                <div>
-                    <h1 class="glass-card-title mb-0">
-                        <?php echo ($lang === 'de') ? 'Admin-Dashboard' : 'Admin dashboard'; ?>
-                    </h1>
-                    <p class="glass-card-sub mb-0">
-                        <?php echo ($lang === 'de')
-                            ? 'Verwalte Benutzer, Stationen, Sammlungen, Zugriffsrechte und Messdaten an einem Ort.'
-                            : 'Manage users, stations, collections, access rights and measurements in one place.'; ?>
-                    </p>
-                </div>
-            </div>
-
-            <div class="glass-card-body">
-                <p class="mb-0">
-                    <?php echo ($lang === 'de')
-                        ? 'Willkommen, ' . htmlspecialchars($firstName ?: $username) . '. Du hast Administratorrechte.'
-                        : 'Welcome, ' . htmlspecialchars($firstName ?: $username) . '. You have administrator access.'; ?>
-                </p>
-            </div>
-        </section>
-
-        <!-- Admin-Kacheln -->
-        <section class="glass-card">
-            <div class="glass-card-body">
-                <div class="row g-3">
-
-                    <!-- Overview -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="index.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Overview' : 'Overview'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Schneller Einstieg in alle Admin-Bereiche.'
-                                        : 'Quick entry point to all admin areas.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Users -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="admin_users.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Users' : 'Users'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Benutzerkonten verwalten und Rollen vergeben.'
-                                        : 'Manage user accounts and roles.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Stations -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="admin_stations.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Stations' : 'Stations'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Stationen registrieren, bearbeiten und zuweisen.'
-                                        : 'Register, edit and assign stations.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Collections -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="admin_collections.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Collections' : 'Collections'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Messwert-Sammlungen verwalten und teilen.'
-                                        : 'Manage and share measurement collections.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Measurements -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="admin_measurements.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Measurements' : 'Measurements'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Messdaten ansehen, filtern und exportieren.'
-                                        : 'View, filter and export measurement data.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Access rights -->
-                    <div class="col-md-6 col-xl-4">
-                        <a href="admin_access_rights.php" class="dashboard-card-link">
-                            <div class="dashboard-card">
-                                <h2 class="dashboard-card-title">
-                                    <?php echo ($lang === 'de') ? 'Access rights' : 'Access rights'; ?>
-                                </h2>
-                                <p class="dashboard-card-text">
-                                    <?php echo ($lang === 'de')
-                                        ? 'Zugriffsrechte für Benutzer und Stationen steuern.'
-                                        : 'Control access rights for users and stations.'; ?>
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-    </div>
-</main>
+if (!$ok) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'DB error']);
+} else {
+    echo json_encode(['status' => 'ok']);
+}
