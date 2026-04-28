@@ -79,7 +79,7 @@ $sql  = "INSERT INTO user
              (pk_username, firstName, lastName, password, email, role, status, mustChangePassword)
          VALUES (?, ?, ?, ?, ?, 'User', 'notverified', 0)";
 $stmt = mysqli_prepare($link, $sql);
-mysqli_stmt_bind_param($stmt, 'ssssss', $username, $firstName, $lastName, $hash, $email);
+mysqli_stmt_bind_param($stmt, 'sssss', $username, $firstName, $lastName, $hash, $email);
 
 if (!mysqli_stmt_execute($stmt)) {
     $_SESSION['register_error'] = 'Registration failed. Please try again.';
@@ -91,7 +91,7 @@ mysqli_stmt_close($stmt);
 
 // Generate verification token and store in email_tokens
 $token     = bin2hex(random_bytes(32));
-$expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+$expiresAt = date('Y-m-d H:i:s', strtotime('+72 hours'));
 $pdo->prepare(
     "INSERT INTO email_tokens (token, fk_username, type, expires_at) VALUES (?, ?, 'verify', ?)"
 )->execute([$token, $username, $expiresAt]);
@@ -105,7 +105,7 @@ try {
     $mail->isHTML(true);
     $mail->Body    = "
         <h2>Welcome, " . htmlspecialchars($firstName) . "!</h2>
-        <p>Click the link below to verify your email address. The link expires in 24 hours.</p>
+        <p>Click the link below to verify your email address. The link expires in 72 hours.</p>
         <p><a href='{$verifyLink}'>{$verifyLink}</a></p>
         <p>If you did not create an account, ignore this email.</p>
     ";

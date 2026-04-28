@@ -62,7 +62,7 @@ if ($row['status'] !== 'verified') {
 
 // Generate 6-digit OTP and store in email_tokens
 $otp       = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-$expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+$expiresAt = date('Y-m-d H:i:s', strtotime('+60 minutes'));
 $username  = $row['pk_username'];
 
 $pdo->prepare("DELETE FROM email_tokens WHERE fk_username = ? AND type = 'otp_login'")

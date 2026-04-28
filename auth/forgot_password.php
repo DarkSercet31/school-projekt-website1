@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user) {
             // Generate a secure reset token
             $token     = bin2hex(random_bytes(32));
-            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+4 hours'));
 
             // Remove any existing reset tokens for this user
             $pdo->prepare("DELETE FROM email_tokens WHERE fk_username = ? AND type = 'reset'")
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->isHTML(true);
                 $mail->Body = "
                     <h2>Password Reset</h2>
-                    <p>Click the link below to reset your password. The link expires in 1 hour.</p>
+                    <p>Click the link below to reset your password. The link expires in 4 hours.</p>
                     <p><a href='{$resetLink}'>{$resetLink}</a></p>
                     <p>If you did not request this, ignore this email.</p>
                 ";

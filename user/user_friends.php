@@ -146,11 +146,11 @@ mysqli_stmt_close($stmt);
 
 // Load incoming pending requests
 $stmt = mysqli_prepare($link,
-    "SELECT u.pk_username, u.firstName, u.lastName, f.requested_at
+    "SELECT u.pk_username, u.firstName, u.lastName
      FROM isfriend f
      JOIN user u ON f.pkfk_user_user = u.pk_username
      WHERE f.pkfk_user_friend = ? AND f.status = 'pending'
-     ORDER BY f.requested_at DESC"
+     ORDER BY u.pk_username ASC"
 );
 mysqli_stmt_bind_param($stmt, 's', $username);
 mysqli_stmt_execute($stmt);
@@ -209,7 +209,6 @@ include '../includes/header.php';
                     <thead>
                         <tr>
                             <th><?php echo ($lang === 'de') ? 'Von' : 'From'; ?></th>
-                            <th><?php echo ($lang === 'de') ? 'Datum' : 'Date'; ?></th>
                             <th></th>
                         </tr>
                     </thead>
@@ -222,7 +221,6 @@ include '../includes/header.php';
                                         <?php echo htmlspecialchars(trim($p['firstName'] . ' ' . $p['lastName'])); ?>
                                     </span>
                                 </td>
-                                <td><?php echo htmlspecialchars($p['requested_at']); ?></td>
                                 <td class="text-end">
                                     <form method="post" class="d-inline">
                                         <input type="hidden" name="action" value="accept">

@@ -13,7 +13,7 @@ $done     = false;
 if ($token !== '') {
     $stmt = $pdo->prepare(
         "SELECT fk_username FROM email_tokens
-         WHERE token = ? AND type = 'reset' AND expires_at > NOW()"
+         WHERE token = ? AND type = 'reset' AND expires_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
     );
     $stmt->execute([$token]);
     $tokenRow = $stmt->fetch();
